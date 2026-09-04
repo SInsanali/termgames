@@ -120,6 +120,7 @@ class ThemeScreen(ModalScreen):
         self.call_later(lambda: setattr(theme_list, "index", list(THEMES).index(current)))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
+        event.stop()
         if isinstance(event.item, ThemeListItem):
             self.dismiss(event.item.theme_id)
 

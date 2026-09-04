@@ -52,7 +52,10 @@ class BaseGameScreen(ModalScreen):
         Binding("escape", "dismiss", show=False),
     ]
 
-    CSS = """
+    # DEFAULT_CSS (not CSS) so this cascades to every subclass automatically —
+    # Textual only auto-applies a plain `CSS` block to the exact class that
+    # defines it, not to subclasses that don't redeclare their own.
+    DEFAULT_CSS = """
     BaseGameScreen {
         align: center middle;
         background: $background;

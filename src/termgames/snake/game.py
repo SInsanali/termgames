@@ -19,8 +19,8 @@ class SnakeScreen(BaseGameScreen):
     GAME_TITLE = "SNAKE"
     BASE_INTERVAL = 0.13
     MIN_INTERVAL = 0.05
-    BOARD_W = 30
-    BOARD_H = 18
+    BOARD_W = 34
+    BOARD_H = 20
     CELL_W = 2
 
     def reset(self) -> None:
