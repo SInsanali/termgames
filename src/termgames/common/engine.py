@@ -19,7 +19,8 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
-from . import scores
+from . import leaderboard, scores
+from .name_entry import NameEntryScreen
 from .theme import get_theme
 
 DIRS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
@@ -125,6 +126,15 @@ class BaseGameScreen(ModalScreen):
             self._high = self._score
             scores.save(self.GAME_ID, self._high)
         self._redraw()
+
+        if leaderboard.qualifies(self.GAME_ID, self._score):
+            rank = leaderboard.rank_for(self.GAME_ID, self._score)
+
+            def handle_name(name: str | None) -> None:
+                if name:
+                    leaderboard.add(self.GAME_ID, name, self._score)
+
+            self.app.push_screen(NameEntryScreen(self._score, rank), handle_name)
 
     # ── input ──────────────────────────────────────────────────────────
 

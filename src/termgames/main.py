@@ -31,22 +31,12 @@ except ModuleNotFoundError as exc:
     )
     sys.exit(1)
 
-from .breakout import BreakoutScreen
-from .common.previews import PREVIEWS
+from .common import leaderboard
 from .common.theme import THEMES, get_theme, load_saved_theme, save_theme
-from .pong import PongScreen
 from .snake import SnakeScreen
-from .tetris import TetrisScreen
-from .tron import TronScreen
-from .twenty48 import TwentyFortyEightScreen
 
 GAMES = [
     ("snake", "Snake", SnakeScreen),
-    ("tetris", "Tetris", TetrisScreen),
-    ("2048", "2048", TwentyFortyEightScreen),
-    ("breakout", "Breakout", BreakoutScreen),
-    ("pong", "Pong", PongScreen),
-    ("tron", "Tron", TronScreen),
 ]
 
 
@@ -176,7 +166,7 @@ class TermGamesApp(App):
         border-title-style: bold;
     }
 
-    #preview-panel {
+    #leaderboard-panel {
         border: heavy $accent;
         background: $surface;
         padding: 0 1 1 1;
@@ -206,20 +196,9 @@ class TermGamesApp(App):
         color: $text;
     }
 
-    #preview-art {
+    #leaderboard-body {
         height: auto;
         padding: 1 2;
-        margin-bottom: 1;
-    }
-
-    #preview-tagline {
-        text-style: italic;
-        margin-bottom: 1;
-    }
-
-    #preview-controls-title {
-        text-style: bold;
-        color: $accent;
     }
 
     #status-bar {
@@ -255,12 +234,9 @@ class TermGamesApp(App):
                     *(ListItem(Static(name)) for _, name, _ in GAMES),
                     id="game-list",
                 )
-            with Vertical(id="preview-panel") as preview_panel:
-                preview_panel.border_title = "HOW TO PLAY"
-                yield Static(id="preview-art")
-                yield Static(id="preview-tagline")
-                yield Static("CONTROLS", id="preview-controls-title")
-                yield Static(id="preview-controls")
+            with Vertical(id="leaderboard-panel") as leaderboard_panel:
+                leaderboard_panel.border_title = "LEADERBOARD"
+                yield Static(id="leaderboard-body")
         with Container(id="status-bar"):
             yield Static(id="status-line")
         yield Footer()
@@ -288,22 +264,25 @@ class TermGamesApp(App):
 
     @on(ListView.Highlighted, "#game-list")
     def on_game_highlighted(self, event: ListView.Highlighted) -> None:
-        self._render_preview(event.list_view.index or 0)
+        self._render_leaderboard(event.list_view.index or 0)
 
-    def _render_preview(self, index: int) -> None:
+    def _render_leaderboard(self, index: int) -> None:
         game_id, name, _ = GAMES[index]
-        info = PREVIEWS[game_id]
         theme = get_theme(self)
+        board = leaderboard.load(game_id)
 
-        art_lines = info["art"](theme)
-        self.query_one("#preview-art", Static).update("\n".join(art_lines))
-
-        self.query_one("#preview-tagline", Static).update(
-            f"[bold]{name}[/]  —  {info['tagline']}"
-        )
-
-        controls = "\n".join(f"  {line}" for line in info["controls"])
-        self.query_one("#preview-controls", Static).update(controls)
+        lines = [f"[bold]{name}[/]", ""]
+        if not board:
+            lines.append("[dim]No scores yet — be the first![/]")
+        else:
+            for i, entry in enumerate(board):
+                rank = i + 1
+                color = theme["accent"] if rank == 1 else theme["primary"]
+                lines.append(
+                    f"[bold {color}]{rank}.[/] {entry['name']:<12} "
+                    f"[bold]{entry['score']:>6}[/]"
+                )
+        self.query_one("#leaderboard-body", Static).update("\n".join(lines))
 
     def action_open_themes(self) -> None:
         def handle_theme(theme_id: str | None) -> None:
@@ -313,7 +292,7 @@ class TermGamesApp(App):
                 self.query_one("#banner", Static).update(self._banner_text())
                 self._refresh_status()
                 game_list = self.query_one("#game-list", ListView)
-                self._render_preview(game_list.index or 0)
+                self._render_leaderboard(game_list.index or 0)
                 self.notify(f"Theme: {THEMES[theme_id]['name']}", timeout=2)
 
         self.push_screen(ThemeScreen(), handle_theme)
@@ -321,7 +300,11 @@ class TermGamesApp(App):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index or 0
         _, _, screen_cls = GAMES[index]
-        self.push_screen(screen_cls())
+
+        def after_game(_: object) -> None:
+            self._render_leaderboard(index)
+
+        self.push_screen(screen_cls(), after_game)
 
 
 def main() -> None:
