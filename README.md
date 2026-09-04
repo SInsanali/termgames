@@ -15,6 +15,7 @@ the keys:
 
 ## Games
 
+- **Snake** — the original [ViperSSH](https://github.com/SInsanali/viperssh) easter egg, now a real menu entry. wasd/arrows steer.
 - **Tetris** — wasd/arrows move and rotate, `s` soft-drops.
 - **2048** — wasd/arrows slide the whole board.
 - **Breakout** — `a`/`d` or left/right move the paddle.
@@ -25,7 +26,11 @@ High scores persist per-game to `~/.termgames/scores/`.
 
 Launching `termgames` opens a two-pane menu: pick a game on the left, and
 the right panel shows mock preview art plus its specific controls. Press
-`t` to cycle color themes, `enter` to play, `esc` to return to the menu.
+`t` to open the theme picker — the same 13 named color themes as ViperSSH
+(Viper, Cyberpunk, Sunset, Matrix, Blaze, Dracula, One Dark, Monokai, Ember,
+Gruvbox, Aurora, Midnight, Jade), applied across the menu and every game.
+Your choice is remembered in `~/.termgames/theme` for next time. `enter`
+plays the highlighted game, `esc` returns to the menu.
 
 ## Install & run
 
@@ -45,7 +50,7 @@ it from anywhere afterward; re-run `./termgames --setup` to redo that later.
 
 ## Adding a game
 
-Every game is a `BaseGameScreen` subclass (see `termgames/common/engine.py`)
+Every game is a `BaseGameScreen` subclass (see `src/termgames/common/engine.py`)
 that implements three methods:
 
 - `reset()` — set up a fresh board/score
@@ -54,7 +59,7 @@ that implements three methods:
 
 The base class handles input bindings, the pause/game-over state machine,
 themed borders, and high-score persistence, so a new game is just its grid
-logic. Drop the new package under `termgames/`, add it to `GAMES` in
-`termgames/main.py`, and add a matching entry (tagline, controls, preview
-art) to `PREVIEWS` in `termgames/common/previews.py` — it shows up in the
+logic. Drop the new package under `src/termgames/`, add it to `GAMES` in
+`src/termgames/main.py`, and add a matching entry (tagline, controls, preview
+art) to `PREVIEWS` in `src/termgames/common/previews.py` — it shows up in the
 launcher menu and its preview panel.

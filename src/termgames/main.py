@@ -15,6 +15,7 @@ try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Container, Horizontal, Vertical
+    from textual.screen import ModalScreen
     from textual.widgets import Footer, ListItem, ListView, Static
 except ModuleNotFoundError as exc:
     if exc.name != "textual":
@@ -32,19 +33,105 @@ except ModuleNotFoundError as exc:
 
 from .breakout import BreakoutScreen
 from .common.previews import PREVIEWS
-from .common.theme import THEMES, get_theme
+from .common.theme import THEMES, get_theme, load_saved_theme, save_theme
 from .pong import PongScreen
+from .snake import SnakeScreen
 from .tetris import TetrisScreen
 from .tron import TronScreen
 from .twenty48 import TwentyFortyEightScreen
 
 GAMES = [
+    ("snake", "Snake", SnakeScreen),
     ("tetris", "Tetris", TetrisScreen),
     ("2048", "2048", TwentyFortyEightScreen),
     ("breakout", "Breakout", BreakoutScreen),
     ("pong", "Pong", PongScreen),
     ("tron", "Tron", TronScreen),
 ]
+
+
+class ThemeListItem(ListItem):
+    """One row in the theme picker: a dot marker plus the theme's name."""
+
+    def __init__(self, theme_id: str, theme_name: str, is_active: bool) -> None:
+        super().__init__(Static(""))
+        self.theme_id = theme_id
+        self.theme_name = theme_name
+        self.is_active = is_active
+
+    def on_mount(self) -> None:
+        self._redraw()
+
+    def _redraw(self) -> None:
+        theme = get_theme(self.app)
+        marker = f"[bold {theme['primary']}]●[/]" if self.is_active else "[dim]○[/]"
+        self.query_one(Static).update(f"{marker} {self.theme_name}")
+
+
+class ThemeScreen(ModalScreen):
+    """Modal theme selector — same interaction as ViperSSH's theme picker."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("t", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+    ]
+
+    CSS = """
+    ThemeScreen {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.85);
+    }
+
+    #theme-container {
+        width: 44;
+        height: auto;
+        max-height: 24;
+        background: $surface;
+        border: heavy $accent;
+        padding: 1 2;
+    }
+
+    #theme-title {
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        padding-bottom: 1;
+    }
+
+    #theme-list {
+        height: auto;
+        max-height: 16;
+    }
+
+    #theme-list > ListItem.--highlight {
+        background: $accent-darken-3;
+    }
+
+    #theme-hint {
+        text-align: center;
+        color: $text-muted;
+        padding-top: 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="theme-container"):
+            yield Static("SELECT THEME", id="theme-title")
+            yield ListView(id="theme-list")
+            yield Static("[dim]enter[/] apply   [dim]esc[/] close", id="theme-hint")
+
+    def on_mount(self) -> None:
+        theme_list = self.query_one("#theme-list", ListView)
+        current = self.app._active_theme
+        for theme_id, theme in THEMES.items():
+            theme_list.append(ThemeListItem(theme_id, theme["name"], theme_id == current))
+        theme_list.focus()
+        self.call_later(lambda: setattr(theme_list, "index", list(THEMES).index(current)))
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if isinstance(event.item, ThemeListItem):
+            self.dismiss(event.item.theme_id)
 
 
 class TermGamesApp(App):
@@ -144,11 +231,15 @@ class TermGamesApp(App):
     """
 
     BINDINGS = [
-        Binding("t", "cycle_theme", "Theme"),
+        Binding("t", "open_themes", "Theme"),
         Binding("q", "quit", "Quit"),
     ]
 
     _active_theme = "viper"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._active_theme = load_saved_theme()
 
     def compose(self) -> ComposeResult:
         with Vertical(id="header"):
@@ -214,13 +305,18 @@ class TermGamesApp(App):
         controls = "\n".join(f"  {line}" for line in info["controls"])
         self.query_one("#preview-controls", Static).update(controls)
 
-    def action_cycle_theme(self) -> None:
-        ids = list(THEMES)
-        self._active_theme = ids[(ids.index(self._active_theme) + 1) % len(ids)]
-        self.query_one("#banner", Static).update(self._banner_text())
-        self._refresh_status()
-        game_list = self.query_one("#game-list", ListView)
-        self._render_preview(game_list.index or 0)
+    def action_open_themes(self) -> None:
+        def handle_theme(theme_id: str | None) -> None:
+            if theme_id and theme_id != self._active_theme:
+                self._active_theme = theme_id
+                save_theme(theme_id)
+                self.query_one("#banner", Static).update(self._banner_text())
+                self._refresh_status()
+                game_list = self.query_one("#game-list", ListView)
+                self._render_preview(game_list.index or 0)
+                self.notify(f"Theme: {THEMES[theme_id]['name']}", timeout=2)
+
+        self.push_screen(ThemeScreen(), handle_theme)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index or 0

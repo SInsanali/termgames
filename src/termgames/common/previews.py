@@ -11,6 +11,17 @@ from typing import Callable
 PreviewArt = Callable[[dict[str, str]], list[str]]
 
 
+def _snake_art(t: dict[str, str]) -> list[str]:
+    p, s = t["primary"], t["secondary"]
+    b = " "
+    return [
+        f"{b*2}[{p}]██████████[/]{b*6}",
+        f"{b*2}[{p}]██[/]{b*10}[{p}]██[/]",
+        f"{b*2}[{p}]██[/]{b*4}[{p}]████[/]{b*4}",
+        f"{b*8}[{s}]██[/]{b*8}",
+    ]
+
+
 def _tetris_art(t: dict[str, str]) -> list[str]:
     p, s, a = t["primary"], t["secondary"], t["accent"]
     b = " "
@@ -76,6 +87,14 @@ def _tron_art(t: dict[str, str]) -> list[str]:
 
 
 PREVIEWS: dict[str, dict] = {
+    "snake": {
+        "tagline": "Eat, grow, don't hit the walls or yourself.",
+        "controls": [
+            "wasd / arrows — steer",
+            "can't reverse straight into your own body",
+        ],
+        "art": _snake_art,
+    },
     "tetris": {
         "tagline": "Stack falling blocks, clear full rows.",
         "controls": [
