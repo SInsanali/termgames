@@ -1,16 +1,34 @@
 """termgames — a small collection of terminal games sharing one control
 scheme: wasd/arrows to steer, space to pause, r to restart, esc to exit.
 
-Run with:  python -m termgames
+Don't run this file directly. Launch the app with the `./termgames` script
+at the repo root — it sets up an isolated environment with the right
+dependencies and runs this for you.
 """
 
 from __future__ import annotations
 
-from textual import on
-from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Footer, ListItem, ListView, Static
+import sys
+
+try:
+    from textual import on
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Container, Horizontal, Vertical
+    from textual.widgets import Footer, ListItem, ListView, Static
+except ModuleNotFoundError as exc:
+    if exc.name != "textual":
+        raise
+    print(
+        "termgames needs its dependencies installed, which this Python "
+        "interpreter doesn't have.\n\n"
+        "Run the app with the launcher script from the repo root instead:\n"
+        "    ./termgames\n\n"
+        "It sets up an isolated environment automatically — no manual pip "
+        "install needed.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 from .breakout import BreakoutScreen
 from .common.previews import PREVIEWS
