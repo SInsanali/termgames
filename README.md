@@ -21,6 +21,10 @@ the keys:
 
 High scores persist per-game to `~/.termgames/scores/`.
 
+Launching `termgames` opens a two-pane menu: pick a game on the left, and
+the right panel shows mock preview art plus its specific controls. Press
+`t` to cycle color themes, `enter` to play, `esc` to return to the menu.
+
 ## Install & run
 
 ```bash
@@ -46,4 +50,6 @@ that implements three methods:
 The base class handles input bindings, the pause/game-over state machine,
 themed borders, and high-score persistence, so a new game is just its grid
 logic. Drop the new package under `termgames/`, add it to `GAMES` in
-`termgames/main.py`, and it shows up in the launcher menu.
+`termgames/main.py`, and add a matching entry (tagline, controls, preview
+art) to `PREVIEWS` in `termgames/common/previews.py` — it shows up in the
+launcher menu and its preview panel.
