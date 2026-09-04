@@ -40,8 +40,37 @@ GAMES = [
 ]
 
 
+class GameListItem(ListItem):
+    """One row in the games list: a '>' marker on the highlighted item,
+    same as ViperSSH's list styling."""
+
+    def __init__(self, game_name: str) -> None:
+        super().__init__(Static(""))
+        self.game_name = game_name
+
+    def on_mount(self) -> None:
+        self._redraw()
+
+    def watch_highlighted(self, value: bool) -> None:
+        super().watch_highlighted(value)
+        self._redraw()
+
+    def refresh_theme(self) -> None:
+        self._redraw()
+
+    def _redraw(self) -> None:
+        theme = get_theme(self.app)
+        if self.highlighted:
+            self.query_one(Static).update(
+                f"[bold {theme['secondary']}]>[/] [bold]{self.game_name}[/]"
+            )
+        else:
+            self.query_one(Static).update(f"  {self.game_name}")
+
+
 class ThemeListItem(ListItem):
-    """One row in the theme picker: a dot marker plus the theme's name."""
+    """One row in the theme picker: a dot marker plus the theme's name,
+    and a '>' marker on the highlighted item."""
 
     def __init__(self, theme_id: str, theme_name: str, is_active: bool) -> None:
         super().__init__(Static(""))
@@ -52,10 +81,22 @@ class ThemeListItem(ListItem):
     def on_mount(self) -> None:
         self._redraw()
 
+    def watch_highlighted(self, value: bool) -> None:
+        super().watch_highlighted(value)
+        self._redraw()
+
+    def refresh_theme(self) -> None:
+        self._redraw()
+
     def _redraw(self) -> None:
         theme = get_theme(self.app)
         marker = f"[bold {theme['primary']}]●[/]" if self.is_active else "[dim]○[/]"
-        self.query_one(Static).update(f"{marker} {self.theme_name}")
+        if self.highlighted:
+            self.query_one(Static).update(
+                f"[bold {theme['secondary']}]>[/] {marker} [bold]{self.theme_name}[/]"
+            )
+        else:
+            self.query_one(Static).update(f"  {marker} {self.theme_name}")
 
 
 class ThemeScreen(ModalScreen):
@@ -94,7 +135,7 @@ class ThemeScreen(ModalScreen):
         max-height: 16;
     }
 
-    #theme-list > ListItem.--highlight {
+    #theme-list > ListItem.-highlight {
         background: $accent-darken-3;
     }
 
@@ -192,7 +233,7 @@ class TermGamesApp(App):
         background: $surface-lighten-1;
     }
 
-    #game-list > ListItem.--highlight {
+    #game-list > ListItem.-highlight {
         background: $success-darken-3;
         color: $text;
     }
@@ -221,6 +262,20 @@ class TermGamesApp(App):
         super().__init__(*args, **kwargs)
         self._active_theme = load_saved_theme()
 
+    def get_css_variables(self) -> dict[str, str]:
+        """Map the active theme's colors onto Textual's built-in CSS
+        variables, so every panel/border/highlight in our CSS (which is
+        written against $success/$error/$accent/etc.) follows the theme
+        automatically — same approach as ViperSSH."""
+        variables = super().get_css_variables()
+        theme = get_theme(self)
+        variables["background"] = theme["bg"]
+        variables["surface"] = theme.get("panel_bg", theme["bg"])
+        variables["success"] = theme["primary"]
+        variables["error"] = theme["secondary"]
+        variables["accent"] = theme["accent"]
+        return variables
+
     def compose(self) -> ComposeResult:
         with Vertical(id="header"):
             yield Static(self._banner_text(), id="banner")
@@ -232,7 +287,7 @@ class TermGamesApp(App):
             with Vertical(id="games-panel") as games_panel:
                 games_panel.border_title = "GAMES"
                 yield ListView(
-                    *(ListItem(Static(name)) for _, name, _ in GAMES),
+                    *(GameListItem(name) for _, name, _ in GAMES),
                     id="game-list",
                 )
             with Vertical(id="leaderboard-panel") as leaderboard_panel:
@@ -290,10 +345,23 @@ class TermGamesApp(App):
             if theme_id and theme_id != self._active_theme:
                 self._active_theme = theme_id
                 save_theme(theme_id)
+
+                # Recompute the stylesheet (get_css_variables) against the
+                # new theme — panel borders, highlight backgrounds, etc.
+                self.call_later(self.refresh_css)
+
                 self.query_one("#banner", Static).update(self._banner_text())
                 self._refresh_status()
                 game_list = self.query_one("#game-list", ListView)
                 self._render_leaderboard(game_list.index or 0)
+
+                # Markup baked into list-item labels isn't touched by a CSS
+                # refresh, so re-render each item's own themed text directly.
+                for item in self.query(ListItem):
+                    refresh = getattr(item, "refresh_theme", None)
+                    if callable(refresh):
+                        refresh()
+
                 self.notify(f"Theme: {THEMES[theme_id]['name']}", timeout=2)
 
         self.push_screen(ThemeScreen(), handle_theme)
