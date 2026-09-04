@@ -1,5 +1,7 @@
 # termgames
 
+![termgames launcher menu](docs/menu-screenshot.png)
+
 A small collection of terminal games built with [Textual](https://github.com/Textualize/textual),
 all sharing one control scheme so switching games never means relearning
 the keys:

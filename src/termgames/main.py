@@ -105,7 +105,6 @@ class TermGamesApp(App):
         height: auto;
         padding: 1 2;
         margin-bottom: 1;
-        border: round $accent 50%;
     }
 
     #preview-tagline {
