@@ -27,16 +27,19 @@ the right panel shows mock preview art plus its specific controls. Press
 
 ## Install & run
 
-```bash
-pip install -e .
-termgames
-```
-
-or, without installing:
+One command, no manual setup:
 
 ```bash
-python -m termgames
+git clone https://github.com/SInsanali/termgames.git
+cd termgames
+./termgames
 ```
+
+The `termgames` script creates its own virtual environment under `venv/`,
+installs dependencies into it, and launches the app — self-healing on every
+run, so there's nothing to maintain by hand. The first run also offers to
+symlink itself onto your `PATH` (as `termgames` or `tg`) so you can launch
+it from anywhere afterward; re-run `./termgames --setup` to redo that later.
 
 ## Adding a game
 
