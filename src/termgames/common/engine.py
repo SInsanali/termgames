@@ -34,9 +34,26 @@ class BaseGameScreen(ModalScreen):
     GAME_TITLE = "GAME"       # override: shown in the header
     BASE_INTERVAL = 0.15      # seconds between ticks
     MIN_INTERVAL = 0.05
+
+    # Fallback board size, used only if the terminal size isn't available yet.
+    # Normally overridden per-instance by _autosize() at game start, so the
+    # board fills most of the actual terminal rather than a fixed constant —
+    # fixed for the length of one game (see the class docstring), not this
+    # hardcoded number.
     BOARD_W = 30
     BOARD_H = 18
     CELL_W = 2                # terminal columns per cell, keeps cells ~square
+
+    # Bounds for _autosize() — keep the board playable on a tiny terminal and
+    # sane (not absurdly huge) on a giant one.
+    MIN_BOARD_W = 20
+    MAX_BOARD_W = 90
+    MIN_BOARD_H = 14
+    MAX_BOARD_H = 44
+    # Reserved rows/cols around the board: header line + top/bottom border +
+    # status line (4, fixed — see compose()) plus a little breathing room.
+    AUTOSIZE_MARGIN_W = 4
+    AUTOSIZE_MARGIN_H = 6
 
     BINDINGS = [
         Binding("up", "steer('up')", show=False),
@@ -75,11 +92,24 @@ class BaseGameScreen(ModalScreen):
     # ── lifecycle ──────────────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
+        self._autosize()
         self.reset()
         g = Static(self._frame(), id="game")
         g.styles.width = self.BOARD_W * self.CELL_W + 2
         g.styles.height = self.BOARD_H + 4
         yield g
+
+    def _autosize(self) -> None:
+        """Size the board to fill most of the terminal, once, at game start
+        (fixed for the rest of the game — see the class docstring for why
+        not a board that grows mid-game)."""
+        screen_w, screen_h = self.app.size
+        if not screen_w or not screen_h:
+            return
+        avail_w = max(1, screen_w - self.AUTOSIZE_MARGIN_W)
+        avail_h = max(1, screen_h - self.AUTOSIZE_MARGIN_H)
+        self.BOARD_W = max(self.MIN_BOARD_W, min(self.MAX_BOARD_W, avail_w // self.CELL_W))
+        self.BOARD_H = max(self.MIN_BOARD_H, min(self.MAX_BOARD_H, avail_h))
 
     def on_mount(self) -> None:
         self._timer = self.set_interval(self.BASE_INTERVAL, self._on_tick)
