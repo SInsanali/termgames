@@ -42,18 +42,29 @@ class BaseGameScreen(ModalScreen):
     # hardcoded number.
     BOARD_W = 30
     BOARD_H = 18
-    CELL_W = 2                # terminal columns per cell, keeps cells ~square
+    CELL_W = 2                # terminal columns per cell
+    CELL_H = 1                # terminal rows per cell — raise this (with a
+                               # matching CELL_W bump) for chunkier, more
+                               # visible pieces on a game with few of them
+                               # (e.g. Snake's short body), rather than more
+                               # tiny cells filling the same space.
+
+    # Fixed rows around the board, used by both compose() and _autosize():
+    # title line + SCORE/HIGH line, top+bottom border, one status line.
+    HEADER_ROWS = 2
+    BORDER_ROWS = 2
+    FOOTER_ROWS = 1
 
     # Bounds for _autosize() — keep the board playable on a tiny terminal and
-    # sane (not absurdly huge) on a giant one.
+    # sane (not absurdly huge) on a giant one. In *cells*, not terminal
+    # rows/cols, so a game with bigger CELL_W/CELL_H should tighten these.
     MIN_BOARD_W = 20
     MAX_BOARD_W = 90
     MIN_BOARD_H = 14
     MAX_BOARD_H = 44
-    # Reserved rows/cols around the board: header line + top/bottom border +
-    # status line (4, fixed — see compose()) plus a little breathing room.
+    # Extra breathing room beyond the fixed header/border/footer rows.
     AUTOSIZE_MARGIN_W = 4
-    AUTOSIZE_MARGIN_H = 6
+    AUTOSIZE_MARGIN_H = 2
 
     BINDINGS = [
         Binding("up", "steer('up')", show=False),
@@ -96,7 +107,9 @@ class BaseGameScreen(ModalScreen):
         self.reset()
         g = Static(self._frame(), id="game")
         g.styles.width = self.BOARD_W * self.CELL_W + 2
-        g.styles.height = self.BOARD_H + 4
+        g.styles.height = (
+            self.BOARD_H * self.CELL_H + self.HEADER_ROWS + self.BORDER_ROWS + self.FOOTER_ROWS
+        )
         yield g
 
     def _autosize(self) -> None:
@@ -106,10 +119,11 @@ class BaseGameScreen(ModalScreen):
         screen_w, screen_h = self.app.size
         if not screen_w or not screen_h:
             return
+        chrome_h = self.HEADER_ROWS + self.BORDER_ROWS + self.FOOTER_ROWS
         avail_w = max(1, screen_w - self.AUTOSIZE_MARGIN_W)
-        avail_h = max(1, screen_h - self.AUTOSIZE_MARGIN_H)
+        avail_h = max(1, screen_h - chrome_h - self.AUTOSIZE_MARGIN_H)
         self.BOARD_W = max(self.MIN_BOARD_W, min(self.MAX_BOARD_W, avail_w // self.CELL_W))
-        self.BOARD_H = max(self.MIN_BOARD_H, min(self.MAX_BOARD_H, avail_h))
+        self.BOARD_H = max(self.MIN_BOARD_H, min(self.MAX_BOARD_H, avail_h // self.CELL_H))
 
     def on_mount(self) -> None:
         self._timer = self.set_interval(self.BASE_INTERVAL, self._on_tick)
@@ -211,15 +225,21 @@ class BaseGameScreen(ModalScreen):
         accent, secondary = theme["accent"], theme["secondary"]
         width = self.BOARD_W * self.CELL_W + 2
 
-        rows = [self._center(
-            f"{self.GAME_TITLE}    SCORE {self._score}    HIGH {self._high}",
-            f"[bold {accent}]{self.GAME_TITLE}[/]    "
-            f"[bold {accent}]SCORE[/] {self._score}    [bold {accent}]HIGH[/] {self._high}",
+        title_spaced = " ".join(self.GAME_TITLE)
+        rows = [self._center(title_spaced, f"[bold {accent}]{title_spaced}[/]", width)]
+
+        score_plain = f" SCORE {self._score} "
+        high_plain = f" HIGH {self._high} "
+        rows.append(self._center(
+            f"{score_plain}  {high_plain}",
+            f"[bold black on {accent}]{score_plain}[/]  [bold black on {secondary}]{high_plain}[/]",
             width,
-        )]
+        ))
+
         rows.append(f"[{accent}]╔{'═' * (self.BOARD_W * self.CELL_W)}╗[/]")
         for line in self.build_frame(theme):
-            rows.append(f"[{accent}]║[/]{line}[{accent}]║[/]")
+            for _ in range(self.CELL_H):
+                rows.append(f"[{accent}]║[/]{line}[{accent}]║[/]")
         rows.append(f"[{accent}]╚{'═' * (self.BOARD_W * self.CELL_W)}╝[/]")
 
         if self._state == "paused":

@@ -19,9 +19,18 @@ class SnakeScreen(BaseGameScreen):
     GAME_TITLE = "SNAKE"
     BASE_INTERVAL = 0.13
     MIN_INTERVAL = 0.05
+
+    # Fallback only — _autosize() overrides these at game start. Chunkier
+    # cells (4 wide x 2 tall, vs. the engine default 2x1) so a short snake
+    # reads as big blocks rather than getting lost in a sea of tiny ones.
     BOARD_W = 34
     BOARD_H = 20
-    CELL_W = 2
+    CELL_W = 4
+    CELL_H = 2
+    MIN_BOARD_W = 12
+    MAX_BOARD_W = 60
+    MIN_BOARD_H = 6
+    MAX_BOARD_H = 26
 
     def reset(self) -> None:
         self._score = 0
