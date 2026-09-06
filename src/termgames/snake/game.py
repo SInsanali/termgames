@@ -84,8 +84,14 @@ class SnakeScreen(BaseGameScreen):
         return "wasd / arrows steer"
 
     def build_frame(self, theme: dict[str, str]) -> list[str]:
+        # Cells are painted as a *background* colour behind spaces rather than
+        # with "█" glyphs: in most terminal fonts the full-block glyph stops
+        # short of the line height, so a stacked cell (CELL_H = 2) shows a seam
+        # through its middle and a horizontal snake reads as a double line.
+        # A background fill covers the whole character cell, so the body comes
+        # out solid in every direction.
         cw = self.CELL_W
-        cell = "█" * cw
+        blank = " " * cw
         head_color = Color.parse(theme["primary"]).blend(Color.parse("#ffffff"), 0.5).hex
         snake_body = set(self._snake)
         head = self._snake[-1]
@@ -95,12 +101,12 @@ class SnakeScreen(BaseGameScreen):
             line = []
             for x in range(self.BOARD_W):
                 if (x, y) == head:
-                    line.append(f"[{head_color}]{cell}[/]")
+                    line.append(f"[on {head_color}]{blank}[/]")
                 elif (x, y) in snake_body:
-                    line.append(f"[{theme['primary']}]{cell}[/]")
+                    line.append(f"[on {theme['primary']}]{blank}[/]")
                 elif (x, y) == self._food:
-                    line.append(f"[{theme['secondary']}]{cell}[/]")
+                    line.append(f"[on {theme['secondary']}]{blank}[/]")
                 else:
-                    line.append(" " * cw)
+                    line.append(blank)
             rows.append("".join(line))
         return rows
