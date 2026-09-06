@@ -77,7 +77,11 @@ class BaseGameScreen(ModalScreen):
         Binding("d", "steer('right')", show=False),
         Binding("space", "toggle_pause", show=False),
         Binding("r", "restart", show=False),
+        # Both keys leave the game and return to the launcher. A game screen
+        # has no text entry, so "q" is free to mirror escape here — the same
+        # pair quits the launcher itself, so one habit works everywhere.
         Binding("escape", "dismiss", show=False),
+        Binding("q", "dismiss", show=False),
     ]
 
     # DEFAULT_CSS (not CSS) so this cascades to every subclass automatically —

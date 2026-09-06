@@ -254,6 +254,10 @@ class TermGamesApp(App):
     BINDINGS = [
         Binding("t", "open_themes", "Theme"),
         Binding("q", "quit", "Quit"),
+        # Escape is the "back out of here" key everywhere else in the app, so
+        # at the top level it backs out of the app. Hidden from the footer to
+        # avoid listing the same action twice.
+        Binding("escape", "quit", "Quit", show=False),
     ]
 
     _active_theme = "viper"
@@ -314,7 +318,7 @@ class TermGamesApp(App):
             f"[bold {hc}]↑↓[/] [dim]choose[/]   "
             f"[bold {hc}]enter[/] [dim]play[/]   "
             f"[bold {hc}]t[/] [dim]theme[/]   "
-            f"[bold {hc}]q[/] [dim]quit[/]"
+            f"[bold {hc}]esc/q[/] [dim]quit[/]"
         )
         self.query_one("#status-line", Static).update(msg)
 
